@@ -1,6 +1,7 @@
 require("dotenv").config();
 const ethers = require("ethers");
 const { default: inquirer } = require("inquirer");
+const chalk = require("chalk");
 
 // Chain configurations
 const CHAINS = {
@@ -40,9 +41,12 @@ async function main() {
 
   // Create wallet from private key
   const wallet = new ethers.Wallet(process.env.PRIVATE_KEY);
-  console.log(`Using wallet address: ${wallet.address}`);
+  console.log(
+    chalk.cyan(`👛 Using wallet address: ${chalk.bold(wallet.address)}`)
+  );
 
   // Get user input
+  console.log(chalk.blue("\n📝 Please provide the following information:"));
   const answers = await inquirer.prompt([
     {
       type: "list",
@@ -90,35 +94,42 @@ async function main() {
   // Use current wallet address if no sender address provided
   const originalSender = answers.originalSender.trim() || wallet.address;
 
-  console.log("\nQuery Details:");
-  console.log(`Chain: ${chainConfig.name}`);
-  console.log(`Original Sender: ${originalSender}`);
-  console.log(`Key: ${answers.key}`);
+  console.log(chalk.blue("\n📝 Query Details:"));
+  console.log(chalk.cyan(`>  Chain: ${chainConfig.name}`));
+  console.log(chalk.cyan(`>  Original Sender: ${originalSender}`));
+  console.log(chalk.cyan(`>  Key: ${answers.key}`));
 
   try {
     // Setup provider and contract
+    console.log(chalk.yellow(`\n🔄 Connecting to ${chainConfig.name}...`));
     const provider = new ethers.JsonRpcProvider(chainConfig.rpcUrl);
+    console.log(chalk.green(`✅ Connected to ${chainConfig.name}`));
     const connectedWallet = wallet.connect(provider);
     const contract = new ethers.Contract(
       chainConfig.contractAddress,
       CONTRACT_ABI,
       connectedWallet
     );
+    console.log(chalk.green("✅ Contract instance created"));
 
     // Call getValue
-    console.log("\nQuerying value...");
+    console.log(chalk.yellow("\n🔍 Querying value..."));
     const value = await contract.getValue(originalSender, answers.key);
 
     // Display results
-    console.log("\nResults:");
-    console.log(`Raw Value (bytes): 0x${Buffer.from(value).toString("hex")}`);
+    console.log(chalk.blue("\n📝 Results:"));
+    console.log(
+      chalk.cyan(`>  Value (bytes): 0x${Buffer.from(value).toString("hex")}`)
+    );
 
     try {
       // Try to decode as UTF-8 string
       const decodedValue = ethers.toUtf8String(value);
-      console.log(`Decoded Value (UTF-8): ${decodedValue}`);
+      console.log(chalk.cyan(`>  Value (utf8): ${chalk.bold(decodedValue)}`));
     } catch (error) {
-      console.log("Value could not be decoded as UTF-8 string");
+      console.log(
+        chalk.yellow(">  ⚠️  Value could not be decoded as UTF-8 string")
+      );
     }
 
     // Also compute and show the hashedKey
@@ -128,16 +139,16 @@ async function main() {
         [originalSender, answers.key]
       )
     );
-    console.log(`HashedKey: ${hashedKey}`);
+    console.log(chalk.cyan(`>  HashedKey: ${chalk.bold(hashedKey)}`));
   } catch (error) {
-    console.error("Error:", error.message);
+    console.error(chalk.red("❌ Error:"), error.message);
     if (error.data) {
-      console.error("Error data:", error.data);
+      console.error(chalk.red("❌ Error data:"), error.data);
     }
   }
 }
 
 main().catch((error) => {
-  console.error(error);
+  console.error(chalk.red("❌ Error:"), error);
   process.exit(1);
 });

@@ -1,11 +1,12 @@
 require("dotenv").config();
 const hre = require("hardhat");
+const chalk = require('chalk');
 
 async function main() {
   // Get the network name from Hardhat's config
   const networkName = hre.network.name;
   const chainId = hre.network.config.chainId;
-  console.log(`Deploying to network: ${networkName} (${chainId})`);
+  console.log(chalk.blue(`🌐 Deploying to network: ${chalk.bold(networkName)} (${chainId})`));
 
   // Get the Polymer Prover address based on the network
   let polymerProverAddress;
@@ -21,9 +22,9 @@ async function main() {
     throw new Error("Unsupported network");
   }
 
-  console.log(`Using Polymer Prover address: ${polymerProverAddress}`);
+  console.log(chalk.cyan(`🔗 Using Polymer Prover address: ${chalk.bold(polymerProverAddress)}`));
 
-  console.log("Deploying CrossChainStore...");
+  console.log(chalk.yellow('📄 Deploying CrossChainStore...'));
   const CrossChainStore = await hre.ethers.getContractFactory(
     "CrossChainStore"
   );
@@ -31,12 +32,12 @@ async function main() {
   await store.waitForDeployment();
 
   const address = await store.getAddress();
-  console.log(`CrossChainStore deployed to: ${address}`);
+  console.log(chalk.green(`✅ CrossChainStore deployed to: ${chalk.bold(address)}`));
 
   // Wait for a few block confirmations
-  console.log("Waiting for confirmations...");
+  console.log(chalk.yellow('⏳ Waiting for confirmations...'));
   await store.deploymentTransaction().wait(5);
-  console.log("Deployment confirmed!");
+  console.log(chalk.green('🎉 Deployment confirmed!'));
 
   return address;
 }
@@ -44,6 +45,6 @@ async function main() {
 main()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error(error);
+    console.error(chalk.red('❌ Error:'), error);
     process.exit(1);
   });

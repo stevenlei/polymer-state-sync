@@ -1,6 +1,7 @@
 require("dotenv").config();
 const ethers = require("ethers");
 const { default: inquirer } = require("inquirer");
+const chalk = require("chalk");
 
 // Chain configurations
 const CHAINS = {
@@ -40,9 +41,12 @@ async function main() {
 
   // Create wallet from private key
   const wallet = new ethers.Wallet(process.env.PRIVATE_KEY);
-  console.log(`Using wallet address: ${wallet.address}`);
+  console.log(
+    chalk.cyan(`👛 Using wallet address: ${chalk.bold(wallet.address)}`)
+  );
 
   // Get user input
+  console.log(chalk.blue("\n📝 Please provide the following information:"));
   const answers = await inquirer.prompt([
     {
       type: "list",
@@ -100,14 +104,16 @@ async function main() {
   const sourceChainConfig = CHAINS[answers.sourceChain];
   const destinationChainConfig = CHAINS[answers.destinationChain];
 
-  console.log("\nTransaction Details:");
-  console.log(`From Chain: ${sourceChainConfig.name}`);
-  console.log(`To Chain: ${destinationChainConfig.name}`);
-  console.log(`Key: ${answers.key}`);
-  console.log(`Value: ${answers.value}`);
+  console.log(chalk.blue("\n📝 Transaction Details:"));
+  console.log(chalk.cyan(`>  From Chain: ${sourceChainConfig.name}`));
+  console.log(chalk.cyan(`>  To Chain: ${destinationChainConfig.name}`));
+  console.log(chalk.cyan(`>  Key: ${answers.key}`));
+  console.log(chalk.cyan(`>  Value (utf8): ${answers.value}`));
 
   const bytesValue = ethers.toUtf8Bytes(answers.value);
-  console.log(`Value in bytes: 0x${Buffer.from(bytesValue).toString("hex")}`);
+  console.log(
+    chalk.cyan(`>  Value (bytes): 0x${Buffer.from(bytesValue).toString("hex")}`)
+  );
 
   // Confirm transaction
   const confirmation = await inquirer.prompt([
@@ -126,29 +132,36 @@ async function main() {
 
   try {
     // Setup provider and contract
+    console.log(
+      chalk.yellow(`\n🔄 Connecting to ${sourceChainConfig.name}...`)
+    );
     const provider = new ethers.JsonRpcProvider(sourceChainConfig.rpcUrl);
+    console.log(chalk.green(`✅ Connected to ${sourceChainConfig.name}`));
     const connectedWallet = wallet.connect(provider);
     const contract = new ethers.Contract(
       sourceChainConfig.contractAddress,
       CONTRACT_ABI,
       connectedWallet
     );
+    console.log(chalk.green("✅ Contract instance created"));
 
     // Convert value to bytes
     const valueBytes = ethers.toUtf8Bytes(answers.value);
 
     // Estimate gas
-    console.log("\nEstimating gas...");
+    console.log(chalk.blue("\n🔄 Estimating gas..."));
     const estimatedGas = await contract.setValue.estimateGas(
       answers.key,
       valueBytes,
       destinationChainConfig.chainId
     );
 
-    console.log(`Estimated gas: ${estimatedGas.toString()}`);
+    console.log(chalk.green(`⛽️ Estimated gas: ${estimatedGas.toString()}`));
 
     // Send transaction
-    console.log("Sending transaction...");
+    console.log(
+      chalk.yellow(`\n📤 Setting value "${answers.value}" in the contract...`)
+    );
     const tx = await contract.setValue(
       answers.key,
       valueBytes,
@@ -157,13 +170,16 @@ async function main() {
         gasLimit: estimatedGas,
       }
     );
+    console.log(chalk.green("✅ Transaction sent"));
 
-    console.log(`Transaction submitted: ${tx.hash}`);
-    console.log("Waiting for confirmation...");
-
+    console.log(chalk.cyan(`>  Tx hash: ${tx.hash}`));
+    console.log(chalk.yellow("\n⏳ Waiting for confirmation..."));
     const receipt = await tx.wait();
+    console.log(chalk.green("🎉 Value set successfully!"));
     console.log(
-      `Transaction confirmed! Gas used: ${receipt.gasUsed.toString()}`
+      chalk.green(
+        `✅ Transaction confirmed! Gas used: ${receipt.gasUsed.toString()}`
+      )
     );
 
     // Find the ValueSet event
@@ -175,23 +191,23 @@ async function main() {
       const { sender, key, value, destinationChainId, nonce, hashedKey } =
         valueSetEvent.args;
 
-      console.log("\nEvent Details:");
-      console.log(`Sender: ${sender}`);
-      console.log(`Key: ${key}`);
-      console.log(`Value: ${ethers.toUtf8String(value)}`);
-      console.log(`Destination Chain ID: ${destinationChainId}`);
-      console.log(`Nonce: ${nonce}`);
-      console.log(`HashedKey: ${hashedKey}`);
+      console.log(chalk.blue("\n📝 Event Details:"));
+      console.log(chalk.cyan(`>  Sender: ${sender}`));
+      console.log(chalk.cyan(`>  Key: ${key}`));
+      console.log(chalk.cyan(`>  Value: ${ethers.toUtf8String(value)}`));
+      console.log(chalk.cyan(`>  Destination Chain ID: ${destinationChainId}`));
+      console.log(chalk.cyan(`>  Nonce: ${nonce}`));
+      console.log(chalk.cyan(`>  HashedKey: ${hashedKey}`));
     }
   } catch (error) {
-    console.error("Error:", error.message);
+    console.error(chalk.red("❌ Error:"), error.message);
     if (error.data) {
-      console.error("Error data:", error.data);
+      console.error(chalk.red("❌ Error data:"), error.data);
     }
   }
 }
 
 main().catch((error) => {
-  console.error(error);
+  console.error(chalk.red("❌ Error:"), error);
   process.exit(1);
 });

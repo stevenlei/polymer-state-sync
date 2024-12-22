@@ -1,6 +1,7 @@
 require("dotenv").config();
 const ethers = require("ethers");
 const axios = require("axios");
+const chalk = require("chalk");
 
 const POLYMER_API_URL = "https://proof.sepolia.polymer.zone";
 
@@ -40,13 +41,21 @@ class ChainListener {
   }
 
   async start() {
-    console.log(`Starting listener for ${this.config.name}...`);
-    console.log(`Contract address: ${this.config.contractAddress}`);
-    console.log(`Chain ID: ${this.config.chainId}`);
+    console.log(
+      chalk.blue(`>  Starting listener for ${chalk.bold(this.config.name)}...`)
+    );
+    console.log(
+      chalk.cyan(
+        `>  Contract address: ${chalk.bold(this.config.contractAddress)}`
+      )
+    );
+    console.log(chalk.cyan(`>  Chain ID: ${chalk.bold(this.config.chainId)}`));
 
     // Get the latest block
     const latestBlock = await this.provider.getBlockNumber();
-    console.log(`Current block number: ${latestBlock}`);
+    console.log(
+      chalk.yellow(`>  Current block number: ${chalk.bold(latestBlock)}`)
+    );
 
     // Listen for ValueSet events
     this.contract.on(
@@ -78,21 +87,56 @@ class ChainListener {
           // Get the position in the block
           const positionInBlock = receipt.index;
 
-          console.log(`\nNew ValueSet event detected on ${this.config.name}:`);
-          console.log(`- Sender: ${sender}`);
-          console.log(`- Key: ${key}`);
-          console.log(`- Value: ${ethers.hexlify(value)}`);
-          console.log(`- Destination Chain ID: ${destinationChainId}`);
-          console.log(`- Nonce: ${nonce}`);
-          console.log(`- HashedKey: ${hashedKey}`);
-          console.log(`- Block Number: ${event.log.blockNumber}`);
-          console.log(`- Block Hash: ${event.log.blockHash}`);
-          console.log(`- Transaction Hash: ${event.log.transactionHash}`);
-          console.log(`- Log Index: ${event.log.index}`);
-          console.log(`- Position in Block: ${positionInBlock}`);
+          console.log(
+            chalk.blue(
+              `\n🔔 New ValueSet event detected on ${chalk.bold(
+                this.config.name
+              )}:`
+            )
+          );
+          console.log(chalk.cyan(`>  Sender: ${chalk.bold(sender)}`));
+          console.log(chalk.cyan(`>  Key: ${chalk.bold(key)}`));
+
+          console.log(
+            chalk.cyan(`>  Value (bytes): ${chalk.bold(ethers.hexlify(value))}`)
+          );
+
+          const valueDecoded = ethers.toUtf8String(value);
+          console.log(
+            chalk.cyan(`>  Value (utf8): ${chalk.bold(valueDecoded)}`)
+          );
+
+          console.log(
+            chalk.cyan(
+              `>  Destination Chain ID: ${chalk.bold(destinationChainId)}`
+            )
+          );
+          console.log(chalk.cyan(`>  Nonce: ${chalk.bold(nonce)}`));
+          console.log(chalk.cyan(`>  HashedKey: ${chalk.bold(hashedKey)}`));
+          console.log(
+            chalk.cyan(`>  Block Number: ${chalk.bold(event.log.blockNumber)}`)
+          );
+          console.log(
+            chalk.cyan(`>  Block Hash: ${chalk.bold(event.log.blockHash)}`)
+          );
+          console.log(
+            chalk.cyan(
+              `>  Transaction Hash: ${chalk.bold(event.log.transactionHash)}`
+            )
+          );
+          console.log(
+            chalk.cyan(`>  Log Index: ${chalk.bold(event.log.index)}`)
+          );
+          console.log(
+            chalk.cyan(`>  Position in Block: ${chalk.bold(positionInBlock)}`)
+          );
           if (block) {
             console.log(
-              `- Block Time: ${new Date(block.timestamp * 1000).toISOString()}`
+              chalk.cyan(
+                `>  Block Time: ${chalk.bold(
+                  new Date(block.timestamp * 1000).toISOString()
+                )}`
+              )
             );
           }
 
@@ -114,19 +158,13 @@ class ChainListener {
             });
             this.processedEvents.add(eventId);
           } catch (error) {
-            console.error(`Error handling event ${eventId}:`, error);
+            console.error(
+              chalk.red("❌ Error handling ValueSet event:"),
+              error
+            );
           }
         } catch (error) {
-          console.error("Error processing event:", error);
-          console.error("Event data:", {
-            sender,
-            key,
-            value: ethers.hexlify(value),
-            destinationChainId: destinationChainId.toString(),
-            nonce: nonce.toString(),
-            hashedKey,
-            event: event.log,
-          });
+          console.error(chalk.red("❌ Error processing event:"), error);
         }
       }
     );
@@ -147,12 +185,14 @@ class ChainListener {
       return;
     }
 
-    console.log(`\nProcessing cross-chain message:`);
-    console.log(`From: ${this.config.name}`);
-    console.log(`To: ${destinationChain.name}`);
+    console.log(chalk.yellow("\n📤 Submitting proof request to Polymer..."));
+    console.log(chalk.cyan(`>  From Chain: ${chalk.bold(this.config.name)}`));
+    console.log(
+      chalk.cyan(`>  To Chain: ${chalk.bold(destinationChain.name)}`)
+    );
 
     // Request proof from Polymer API
-    console.log(`Requesting proof from Polymer API...`);
+    console.log(chalk.yellow(`>  Requesting proof from Polymer API...`));
     const proofRequest = await axios.post(
       POLYMER_API_URL,
       {
@@ -181,18 +221,20 @@ class ChainListener {
 
     const jobId = proofRequest.data.result;
 
-    console.log(`Proof requested. Job ID: ${jobId}`);
+    console.log(
+      chalk.green(`✅ Proof requested. Job ID: ${chalk.bold(jobId)}`)
+    );
 
     // we need to wait for the proof to be generated
-    console.log(`Waiting for proof to be generated...`);
+    console.log(chalk.yellow(`>  Waiting for proof to be generated...`));
 
-    // let's check the proof after 8 seconds for the first time, and then every 5 seconds
+    // let's check the proof after 10 seconds for the first time, and then every 5 seconds
     let proofResponse;
     let attempts = 0;
-    const delay = attempts === 0 ? 8000 : 5000;
+    const delay = attempts === 0 ? 10000 : 5000;
     while (!proofResponse?.data || !proofResponse?.data?.result?.proof) {
       if (attempts >= 10) {
-        throw new Error("Failed to get proof from Polymer API");
+        throw new Error(">  Failed to get proof from Polymer API");
       }
       await new Promise((resolve) => setTimeout(resolve, delay));
       proofResponse = await axios.post(
@@ -210,12 +252,16 @@ class ChainListener {
         }
       );
 
-      console.log(`Proof status: ${proofResponse.data.result.status}...`);
+      console.log(`>  Proof status: ${proofResponse.data.result.status}...`);
       attempts++;
     }
 
     const proof = proofResponse.data.result.proof;
-    console.log(`Proof received. Length: ${proof.length} bytes`);
+    console.log(
+      chalk.green(
+        `✅ Proof received. Length: ${chalk.bold(proof.length)} bytes`
+      )
+    );
 
     const proofInBytes = `0x${Buffer.from(proof, "base64").toString("hex")}`;
 
@@ -231,22 +277,32 @@ class ChainListener {
     );
 
     // Submit the proof to the destination chain
-    console.log(`Submitting proof to ${destinationChain.name}...`);
+    console.log(
+      chalk.cyan(
+        `\n📤 Submitting proof to ${chalk.bold(destinationChain.name)}...`
+      )
+    );
 
     // Estimate the tx cost
     const estimatedGas =
       await destinationContract.setValueFromSource.estimateGas(0, proofInBytes);
 
-    console.log(`Estimated gas: ${estimatedGas.toString()}`);
+    console.log(
+      chalk.cyan(`>  Estimated gas: ${chalk.bold(estimatedGas.toString())}`)
+    );
 
     const tx = await destinationContract.setValueFromSource(0, proofInBytes, {
       gasLimit: estimatedGas, // Set an appropriate gas limit
     });
 
-    console.log(`Transaction submitted: ${tx.hash}`);
+    console.log(chalk.green(`⏳ Transaction sent: ${chalk.bold(tx.hash)}`));
     const receipt = await tx.wait();
     console.log(
-      `Transaction confirmed! Gas used: ${receipt.gasUsed.toString()}`
+      chalk.green(
+        `✅ Transaction confirmed! Gas used: ${chalk.bold(
+          receipt.gasUsed.toString()
+        )}`
+      )
     );
   }
 }
@@ -267,31 +323,42 @@ async function main() {
     }
   }
 
-  console.log("Starting Cross-Chain Message Dispatcher");
-  console.log("======================================");
+  console.log(chalk.blue("🔄 Initializing chain listeners..."));
+  console.log(chalk.cyan(`>  Watching for events...`));
 
   // Create wallet from private key
   const wallet = new ethers.Wallet(process.env.PRIVATE_KEY);
-  console.log(`Using wallet address: ${wallet.address}`);
+  console.log(
+    chalk.cyan(
+      `>  Using wallet address (Pay for cross-chain gas): ${chalk.bold(
+        wallet.address
+      )}`
+    )
+  );
 
   // Create listeners for each chain
   const listeners = [];
   for (const [chainKey, chainConfig] of Object.entries(CHAINS)) {
+    console.log(
+      chalk.yellow(
+        `\n🎯 Setting up listener for ${chalk.bold(chainConfig.name)}...`
+      )
+    );
     const listener = new ChainListener(chainConfig, wallet);
     listeners.push(listener);
     await listener.start();
   }
 
-  console.log("\nDispatcher is running and listening for events...");
-  console.log("Press Ctrl+C to stop");
+  console.log(chalk.green("\n✅ All listeners started successfully"));
+  console.log(chalk.blue("👀 Watching for events..."));
 }
 
 // Handle errors
 process.on("unhandledRejection", (error) => {
-  console.error("Unhandled promise rejection:", error);
+  console.error(chalk.red("❌ Unhandled promise rejection:"), error);
 });
 
 main().catch((error) => {
-  console.error(error);
+  console.error(chalk.red("❌ Error:"), error);
   process.exit(1);
 });
