@@ -1,6 +1,6 @@
 # Cross-Chain Key-Value Store with Polymer
 
-A decentralized key-value store that allows users to store and retrieve key-value pairs **across multiple chains**, using [Polymer](https://polymer.org/) to enable secure cross-chain communication. This project demonstrates how to build a cross-chain application that allows users to access their data from any chain that is supported.
+A decentralized key-value store that allows users to store and retrieve key-value pairs **across multiple chains**, using [Polymer](https://www.polymerlabs.org) to enable secure cross-chain communication. This project demonstrates how to build a cross-chain application that allows users to access their data from any chain that is supported.
 
 ## Features
 
