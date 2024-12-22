@@ -14,7 +14,7 @@ A decentralized key-value store that allows users to store and retrieve key-valu
 - Node.js (v18 or higher)
 - `npm` or `yarn`
 - A wallet with some testnet ETH on **Optimism Sepolia** and **Base Sepolia**
-- [Polymer API Key](https://polymer.org/) for requesting the cross-chain proof
+- [Polymer API Key][Polymer](https://docs.polymerlabs.org/docs/build/contact) for requesting the cross-chain proof
 
 ## Installation
 
