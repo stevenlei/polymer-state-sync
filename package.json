@@ -6,7 +6,7 @@
     "compile": "hardhat compile",
     "deploy:optimism": "hardhat run scripts/deploy.js --network optimismSepolia",
     "deploy:base": "hardhat run scripts/deploy.js --network baseSepolia",
-    "dispatcher": "node scripts/dispatcher.js",
+    "relayer": "node scripts/relayer.js",
     "setValue": "node scripts/setValue.js",
     "getValue": "node scripts/getValue.js",
     "test": "hardhat test"

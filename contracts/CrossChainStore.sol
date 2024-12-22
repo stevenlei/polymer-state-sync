@@ -75,7 +75,7 @@ contract CrossChainStore {
         );
     }
 
-    // Function to be called by the dispatcher on the destination chain
+    // Function to be called by the relayer on the destination chain
     function setValueFromSource(
         uint256 logIndex,
         bytes calldata proof
