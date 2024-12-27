@@ -6,20 +6,22 @@ const chalk = require("chalk");
 const POLYMER_API_URL = "https://proof.sepolia.polymer.zone";
 
 // Chain configurations
-const CHAINS = {
-  "optimism-sepolia": {
-    name: "Optimism Sepolia",
-    rpcUrl: process.env.OPTIMISM_SEPOLIA_RPC,
-    contractAddress: process.env.OPTIMISM_CONTRACT_ADDRESS,
-    chainId: 11155420,
-  },
-  "base-sepolia": {
-    name: "Base Sepolia",
-    rpcUrl: process.env.BASE_SEPOLIA_RPC,
-    contractAddress: process.env.BASE_CONTRACT_ADDRESS,
-    chainId: 84532,
-  },
-};
+const activatedChains = process.env.RELAYER_ACTIVATED_CHAINS
+  ? process.env.RELAYER_ACTIVATED_CHAINS.split(",")
+  : [];
+
+if (activatedChains.length === 0) {
+  console.error(
+    "No chains are activated. Please set the RELAYER_ACTIVATED_CHAINS environment variable."
+  );
+  process.exit(1);
+}
+
+const CHAINS = Object.fromEntries(
+  Object.entries(require("../config/chains")).filter(
+    ([key]) => activatedChains.length === 0 || activatedChains.includes(key)
+  )
+);
 
 // Contract ABI (only the events and functions we need)
 const CONTRACT_ABI =
@@ -311,10 +313,13 @@ async function main() {
   // Validate environment variables
   const requiredEnvVars = [
     "PRIVATE_KEY",
-    "OPTIMISM_CONTRACT_ADDRESS",
-    "BASE_CONTRACT_ADDRESS",
-    "OPTIMISM_SEPOLIA_RPC",
-    "BASE_SEPOLIA_RPC",
+    ...activatedChains.map(
+      (chainKey) =>
+        `${chainKey.toUpperCase().replace("-", "_")}_CONTRACT_ADDRESS`
+    ),
+    ...activatedChains.map(
+      (chainKey) => `${chainKey.toUpperCase().replace("-", "_")}_RPC`
+    ),
   ];
 
   for (const envVar of requiredEnvVars) {
