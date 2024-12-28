@@ -1,6 +1,8 @@
 require("dotenv").config();
 const hre = require("hardhat");
 const chalk = require("chalk");
+const fs = require("fs");
+const path = require("path");
 
 async function main() {
   // Get the network name from Hardhat's config
@@ -11,6 +13,16 @@ async function main() {
       `🌐 Deploying to network: ${chalk.bold(networkName)} (${chainId})`
     )
   );
+
+  // Map network names to .env keys
+  const networkToEnvKey = {
+    optimismSepolia: "OPTIMISM_SEPOLIA_CONTRACT_ADDRESS",
+    baseSepolia: "BASE_SEPOLIA_CONTRACT_ADDRESS",
+    modeSepolia: "MODE_SEPOLIA_CONTRACT_ADDRESS",
+    bobSepolia: "BOB_SEPOLIA_CONTRACT_ADDRESS",
+    inkSepolia: "INK_SEPOLIA_CONTRACT_ADDRESS",
+    unichainSepolia: "UNICHAIN_SEPOLIA_CONTRACT_ADDRESS",
+  };
 
   // Get the Polymer Prover address based on the network
   let polymerProverAddress;
@@ -60,6 +72,26 @@ async function main() {
   console.log(chalk.yellow("⏳ Waiting for confirmations..."));
   await store.deploymentTransaction().wait(5);
   console.log(chalk.green("🎉 Deployment confirmed!"));
+
+  // Update .env file
+  const envKey = networkToEnvKey[networkName];
+  if (envKey) {
+    const envPath = path.join(__dirname, "../.env");
+    let envContent = fs.readFileSync(envPath, "utf8");
+
+    const envRegex = new RegExp(`${envKey}=.*`, "g");
+    if (envContent.match(envRegex)) {
+      // Update existing entry
+      envContent = envContent.replace(envRegex, `${envKey}=${address}`);
+    } else {
+      // Add new entry
+      envContent += `\n${envKey}=${address}`;
+    }
+
+    // Write updated content back to .env
+    fs.writeFileSync(envPath, envContent);
+    console.log(chalk.cyan(`📝 Updated ${envKey} in .env`));
+  }
 
   return address;
 }
