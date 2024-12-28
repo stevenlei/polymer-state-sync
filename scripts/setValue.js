@@ -8,7 +8,7 @@ const CHAINS = require("../config/chains");
 
 // Contract ABI
 const CONTRACT_ABI =
-  require("../artifacts/contracts/CrossChainStore.sol/CrossChainStore.json").abi;
+  require("../artifacts/contracts/StateSync.sol/StateSync.json").abi;
 
 async function main() {
   // Create wallet from private key

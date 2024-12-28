@@ -48,17 +48,13 @@ async function main() {
     )
   );
 
-  console.log(chalk.yellow("📄 Deploying CrossChainStore..."));
-  const CrossChainStore = await hre.ethers.getContractFactory(
-    "CrossChainStore"
-  );
-  const store = await CrossChainStore.deploy(polymerProverAddress);
+  console.log(chalk.yellow("📄 Deploying StateSync..."));
+  const StateSync = await hre.ethers.getContractFactory("StateSync");
+  const store = await StateSync.deploy(polymerProverAddress);
   await store.waitForDeployment();
 
   const address = await store.getAddress();
-  console.log(
-    chalk.green(`✅ CrossChainStore deployed to: ${chalk.bold(address)}`)
-  );
+  console.log(chalk.green(`✅ StateSync deployed to: ${chalk.bold(address)}`));
 
   // Wait for a few block confirmations
   console.log(chalk.yellow("⏳ Waiting for confirmations..."));

@@ -60,7 +60,7 @@ async function main() {
 
       // Extract the contract address from the output
       const addressMatch = output.match(
-        /CrossChainStore deployed to: (0x[0-9a-fA-F]{40})/
+        /StateSync deployed to: (0x[0-9a-fA-F]{40})/
       );
       if (!addressMatch) {
         throw new Error(

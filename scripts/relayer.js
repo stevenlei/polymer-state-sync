@@ -25,7 +25,7 @@ const CHAINS = Object.fromEntries(
 
 // Contract ABI (only the events and functions we need)
 const CONTRACT_ABI =
-  require("../artifacts/contracts/CrossChainStore.sol/CrossChainStore.json").abi;
+  require("../artifacts/contracts/StateSync.sol/StateSync.json").abi;
 
 class ChainListener {
   constructor(chainConfig, wallet) {

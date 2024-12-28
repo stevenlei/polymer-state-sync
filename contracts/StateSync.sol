@@ -16,7 +16,7 @@ interface IPolymerProver {
         );
 }
 
-contract CrossChainStore {
+contract StateSync {
     // Polymer prover contract
     IPolymerProver public immutable polymerProver;
 
@@ -81,7 +81,7 @@ contract CrossChainStore {
         bytes32 hashedKey = bytes32(topics[2]);
 
         // Decode the unindexed event data
-        (string memory key, bytes memory value, uint256 nonce) = abi.decode(
+        (, bytes memory value, ) = abi.decode(
             eventData,
             (string, bytes, uint256)
         );
