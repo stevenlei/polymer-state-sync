@@ -6,24 +6,26 @@ const chalk = require("chalk");
 const POLYMER_API_URL = "https://proof.sepolia.polymer.zone";
 
 // Chain configurations
-const CHAINS = {
-  "optimism-sepolia": {
-    name: "Optimism Sepolia",
-    rpcUrl: process.env.OPTIMISM_SEPOLIA_RPC,
-    contractAddress: process.env.OPTIMISM_CONTRACT_ADDRESS,
-    chainId: 11155420,
-  },
-  "base-sepolia": {
-    name: "Base Sepolia",
-    rpcUrl: process.env.BASE_SEPOLIA_RPC,
-    contractAddress: process.env.BASE_CONTRACT_ADDRESS,
-    chainId: 84532,
-  },
-};
+const activatedChains = process.env.RELAYER_ACTIVATED_CHAINS
+  ? process.env.RELAYER_ACTIVATED_CHAINS.split(",")
+  : [];
+
+if (activatedChains.length === 0) {
+  console.error(
+    "No chains are activated. Please set the RELAYER_ACTIVATED_CHAINS environment variable."
+  );
+  process.exit(1);
+}
+
+const CHAINS = Object.fromEntries(
+  Object.entries(require("../config/chains")).filter(
+    ([key]) => activatedChains.length === 0 || activatedChains.includes(key)
+  )
+);
 
 // Contract ABI (only the events and functions we need)
 const CONTRACT_ABI =
-  require("../artifacts/contracts/CrossChainStore.sol/CrossChainStore.json").abi;
+  require("../artifacts/contracts/StateSync.sol/StateSync.json").abi;
 
 class ChainListener {
   constructor(chainConfig, wallet) {
@@ -60,15 +62,7 @@ class ChainListener {
     // Listen for ValueSet events
     this.contract.on(
       "ValueSet",
-      async (
-        sender,
-        key,
-        value,
-        destinationChainId,
-        nonce,
-        hashedKey,
-        event
-      ) => {
+      async (sender, key, value, nonce, hashedKey, event) => {
         try {
           // Create a unique event identifier
           const eventId = `${event.log.blockHash}-${event.log.transactionHash}-${event.log.index}`;
@@ -96,7 +90,6 @@ class ChainListener {
           );
           console.log(chalk.cyan(`>  Sender: ${chalk.bold(sender)}`));
           console.log(chalk.cyan(`>  Key: ${chalk.bold(key)}`));
-
           console.log(
             chalk.cyan(`>  Value (bytes): ${chalk.bold(ethers.hexlify(value))}`)
           );
@@ -106,11 +99,6 @@ class ChainListener {
             chalk.cyan(`>  Value (utf8): ${chalk.bold(valueDecoded)}`)
           );
 
-          console.log(
-            chalk.cyan(
-              `>  Destination Chain ID: ${chalk.bold(destinationChainId)}`
-            )
-          );
           console.log(chalk.cyan(`>  Nonce: ${chalk.bold(nonce)}`));
           console.log(chalk.cyan(`>  HashedKey: ${chalk.bold(hashedKey)}`));
           console.log(
@@ -146,7 +134,6 @@ class ChainListener {
                 sender,
                 key,
                 value,
-                destinationChainId,
                 nonce,
                 hashedKey,
               },
@@ -171,138 +158,191 @@ class ChainListener {
   }
 
   async handleValueSetEvent(data) {
-    const destinationChainId = data.args.destinationChainId.toString();
-
-    // Find the destination chain config
-    const destinationChain = Object.values(CHAINS).find(
-      (chain) => chain.chainId.toString() === destinationChainId
+    // Get all other chains except the source chain
+    const otherChains = Object.values(CHAINS).filter(
+      (chain) => chain.chainId.toString() !== this.config.chainId.toString()
     );
 
-    if (!destinationChain) {
-      console.error(
-        `No configuration found for destination chain ID: ${destinationChainId}`
-      );
+    if (otherChains.length === 0) {
+      console.error("No other chains configured to send proofs to");
       return;
     }
 
-    console.log(chalk.yellow("\n📤 Submitting proof request to Polymer..."));
-    console.log(chalk.cyan(`>  From Chain: ${chalk.bold(this.config.name)}`));
-    console.log(
-      chalk.cyan(`>  To Chain: ${chalk.bold(destinationChain.name)}`)
-    );
+    // Process all chains in parallel
+    await Promise.all(
+      otherChains.map(async (destinationChain) => {
+        try {
+          console.log(
+            chalk.yellow(
+              `\n📤 Submitting proof request to Polymer for ${chalk.bold(
+                destinationChain.name
+              )}...`
+            )
+          );
+          console.log(
+            chalk.cyan(`>  From Chain: ${chalk.bold(this.config.name)}`)
+          );
 
-    // Request proof from Polymer API
-    console.log(chalk.yellow(`>  Requesting proof from Polymer API...`));
-    const proofRequest = await axios.post(
-      POLYMER_API_URL,
-      {
-        jsonrpc: "2.0",
-        id: 1,
-        method: "receipt_requestProof",
-        params: [
-          this.config.chainId,
-          parseInt(destinationChainId),
-          data.blockNumber,
-          data.positionInBlock,
-        ],
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.POLYMER_API_KEY}`,
-        },
-      }
-    );
+          // Request proof from Polymer API
+          console.log(chalk.yellow(`>  Requesting proof from Polymer API...`));
+          const proofRequest = await axios.post(
+            POLYMER_API_URL,
+            {
+              jsonrpc: "2.0",
+              id: 1,
+              method: "receipt_requestProof",
+              params: [
+                this.config.chainId,
+                parseInt(destinationChain.chainId),
+                data.blockNumber,
+                data.positionInBlock,
+              ],
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.POLYMER_API_KEY}`,
+              },
+            }
+          );
 
-    if (proofRequest.status !== 200) {
-      throw new Error(
-        `Failed to get proof from Polymer API. Status code: ${proofRequest.status}`
-      );
-    }
+          if (proofRequest.status !== 200) {
+            throw new Error(
+              `Failed to get proof from Polymer API. Status code: ${proofRequest.status}`
+            );
+          }
 
-    const jobId = proofRequest.data.result;
+          const jobId = proofRequest.data.result;
 
-    console.log(
-      chalk.green(`✅ Proof requested. Job ID: ${chalk.bold(jobId)}`)
-    );
+          console.log(
+            chalk.green(
+              `✅ Proof requested for ${chalk.bold(
+                destinationChain.name
+              )}. Job ID: ${chalk.bold(jobId)}`
+            )
+          );
 
-    // we need to wait for the proof to be generated
-    console.log(chalk.yellow(`>  Waiting for proof to be generated...`));
+          // Wait for the proof to be generated
+          console.log(
+            chalk.yellow(
+              `>  Waiting for proof for ${chalk.bold(
+                destinationChain.name
+              )} to be generated...`
+            )
+          );
 
-    // let's check the proof after 10 seconds for the first time, and then every 5 seconds
-    let proofResponse;
-    let attempts = 0;
-    const delay = attempts === 0 ? 10000 : 5000;
-    while (!proofResponse?.data || !proofResponse?.data?.result?.proof) {
-      if (attempts >= 10) {
-        throw new Error(">  Failed to get proof from Polymer API");
-      }
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      proofResponse = await axios.post(
-        POLYMER_API_URL,
-        {
-          jsonrpc: "2.0",
-          id: 1,
-          method: "receipt_queryProof",
-          params: [jobId],
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.POLYMER_API_KEY}`,
-          },
+          // Check proof after 10 seconds for the first time, then every 5 seconds
+          let proofResponse;
+          let attempts = 0;
+          const delay = attempts === 0 ? 10000 : 5000;
+          while (!proofResponse?.data || !proofResponse?.data?.result?.proof) {
+            if (attempts >= 10) {
+              throw new Error(
+                `Failed to get proof from Polymer API for ${destinationChain.name}`
+              );
+            }
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            proofResponse = await axios.post(
+              POLYMER_API_URL,
+              {
+                jsonrpc: "2.0",
+                id: 1,
+                method: "receipt_queryProof",
+                params: [jobId],
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${process.env.POLYMER_API_KEY}`,
+                },
+              }
+            );
+
+            console.log(
+              `>  Proof status for ${chalk.bold(destinationChain.name)}: ${
+                proofResponse.data.result.status
+              }...`
+            );
+            attempts++;
+          }
+
+          const proof = proofResponse.data.result.proof;
+          console.log(
+            chalk.green(
+              `✅ Proof received for ${chalk.bold(
+                destinationChain.name
+              )}. Length: ${chalk.bold(proof.length)} bytes`
+            )
+          );
+
+          const proofInBytes = `0x${Buffer.from(proof, "base64").toString(
+            "hex"
+          )}`;
+
+          // Setup destination chain contract
+          const destinationProvider = new ethers.JsonRpcProvider(
+            destinationChain.rpcUrl
+          );
+          const destinationWallet = this.wallet.connect(destinationProvider);
+          const destinationContract = new ethers.Contract(
+            destinationChain.contractAddress,
+            CONTRACT_ABI,
+            destinationWallet
+          );
+
+          // Submit proof to destination chain
+          console.log(
+            chalk.cyan(
+              `\n📤 Submitting proof to ${chalk.bold(destinationChain.name)}...`
+            )
+          );
+
+          // Estimate gas
+          const estimatedGas =
+            await destinationContract.setValueFromSource.estimateGas(
+              0,
+              proofInBytes
+            );
+
+          console.log(
+            chalk.cyan(
+              `>  Estimated gas for ${chalk.bold(
+                destinationChain.name
+              )}: ${chalk.bold(estimatedGas.toString())}`
+            )
+          );
+
+          const tx = await destinationContract.setValueFromSource(
+            0,
+            proofInBytes,
+            {
+              gasLimit: estimatedGas,
+            }
+          );
+
+          console.log(
+            chalk.green(
+              `⏳ Transaction sent to ${chalk.bold(
+                destinationChain.name
+              )}: ${chalk.bold(tx.hash)}`
+            )
+          );
+
+          const receipt = await tx.wait();
+          console.log(
+            chalk.green(
+              `✅ Transaction confirmed on ${chalk.bold(
+                destinationChain.name
+              )}! Gas used: ${chalk.bold(receipt.gasUsed.toString())}`
+            )
+          );
+        } catch (error) {
+          console.error(
+            chalk.red(
+              `❌ Error processing chain ${chalk.bold(destinationChain.name)}:`
+            ),
+            error
+          );
         }
-      );
-
-      console.log(`>  Proof status: ${proofResponse.data.result.status}...`);
-      attempts++;
-    }
-
-    const proof = proofResponse.data.result.proof;
-    console.log(
-      chalk.green(
-        `✅ Proof received. Length: ${chalk.bold(proof.length)} bytes`
-      )
-    );
-
-    const proofInBytes = `0x${Buffer.from(proof, "base64").toString("hex")}`;
-
-    // Find the destination chain contract
-    const destinationProvider = new ethers.JsonRpcProvider(
-      destinationChain.rpcUrl
-    );
-    const destinationWallet = this.wallet.connect(destinationProvider);
-    const destinationContract = new ethers.Contract(
-      destinationChain.contractAddress,
-      CONTRACT_ABI,
-      destinationWallet
-    );
-
-    // Submit the proof to the destination chain
-    console.log(
-      chalk.cyan(
-        `\n📤 Submitting proof to ${chalk.bold(destinationChain.name)}...`
-      )
-    );
-
-    // Estimate the tx cost
-    const estimatedGas =
-      await destinationContract.setValueFromSource.estimateGas(0, proofInBytes);
-
-    console.log(
-      chalk.cyan(`>  Estimated gas: ${chalk.bold(estimatedGas.toString())}`)
-    );
-
-    const tx = await destinationContract.setValueFromSource(0, proofInBytes, {
-      gasLimit: estimatedGas, // Set an appropriate gas limit
-    });
-
-    console.log(chalk.green(`⏳ Transaction sent: ${chalk.bold(tx.hash)}`));
-    const receipt = await tx.wait();
-    console.log(
-      chalk.green(
-        `✅ Transaction confirmed! Gas used: ${chalk.bold(
-          receipt.gasUsed.toString()
-        )}`
-      )
+      })
     );
   }
 }
@@ -311,10 +351,13 @@ async function main() {
   // Validate environment variables
   const requiredEnvVars = [
     "PRIVATE_KEY",
-    "OPTIMISM_CONTRACT_ADDRESS",
-    "BASE_CONTRACT_ADDRESS",
-    "OPTIMISM_SEPOLIA_RPC",
-    "BASE_SEPOLIA_RPC",
+    ...activatedChains.map(
+      (chainKey) =>
+        `${chainKey.toUpperCase().replace("-", "_")}_CONTRACT_ADDRESS`
+    ),
+    ...activatedChains.map(
+      (chainKey) => `${chainKey.toUpperCase().replace("-", "_")}_RPC`
+    ),
   ];
 
   for (const envVar of requiredEnvVars) {

@@ -19,14 +19,34 @@ module.exports = {
   },
   networks: {
     optimismSepolia: {
-      url: "https://sepolia.optimism.io",
+      url: process.env.OPTIMISM_SEPOLIA_RPC,
       accounts: [PRIVATE_KEY],
       chainId: 11155420,
     },
     baseSepolia: {
-      url: "https://sepolia.base.org",
+      url: process.env.BASE_SEPOLIA_RPC,
       accounts: [PRIVATE_KEY],
       chainId: 84532,
+    },
+    modeSepolia: {
+      url: process.env.MODE_SEPOLIA_RPC,
+      accounts: [PRIVATE_KEY],
+      chainId: 919,
+    },
+    bobSepolia: {
+      url: process.env.BOB_SEPOLIA_RPC,
+      accounts: [PRIVATE_KEY],
+      chainId: 808813,
+    },
+    inkSepolia: {
+      url: process.env.INK_SEPOLIA_RPC,
+      accounts: [PRIVATE_KEY],
+      chainId: 763373,
+    },
+    unichainSepolia: {
+      url: process.env.UNICHAIN_SEPOLIA_RPC,
+      accounts: [PRIVATE_KEY],
+      chainId: 1301,
     },
   },
 };
