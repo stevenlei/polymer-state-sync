@@ -33,7 +33,6 @@ contract CrossChainStore {
         address indexed sender,
         string key,
         bytes value,
-        uint256 indexed destinationChainId,
         uint256 nonce,
         bytes32 indexed hashedKey
     );
@@ -45,11 +44,7 @@ contract CrossChainStore {
     }
 
     // Set or update a value
-    function setValue(
-        string calldata key,
-        bytes calldata value,
-        uint256 destinationChainId
-    ) external {
+    function setValue(string calldata key, bytes calldata value) external {
         bytes32 hashedKey = keccak256(abi.encodePacked(msg.sender, key));
 
         // If key exists, only original sender can update
@@ -65,14 +60,7 @@ contract CrossChainStore {
         store[hashedKey] = value;
         uint256 currentNonce = nonces[msg.sender]++;
 
-        emit ValueSet(
-            msg.sender,
-            key,
-            value,
-            destinationChainId,
-            currentNonce,
-            hashedKey
-        );
+        emit ValueSet(msg.sender, key, value, currentNonce, hashedKey);
     }
 
     // Function to be called by the relayer on the destination chain
@@ -88,10 +76,9 @@ contract CrossChainStore {
             bytes memory eventData
         ) = polymerProver.validateEvent(logIndex, proof);
 
-        // Extract sender from topic[1], destinationChainId from topic[2], and hashedKey from topic[3]
+        // Extract sender from topic[1] and hashedKey from topic[2]
         address sender = address(uint160(uint256(bytes32(topics[1]))));
-        uint256 destinationChainId = uint256(bytes32(topics[2]));
-        bytes32 hashedKey = bytes32(topics[3]);
+        bytes32 hashedKey = bytes32(topics[2]);
 
         // Decode the unindexed event data
         (string memory key, bytes memory value, uint256 nonce) = abi.decode(
@@ -99,29 +86,18 @@ contract CrossChainStore {
             (string, bytes, uint256)
         );
 
-        // Create a unique proof hash using the concatenated data
+        // Create a unique hash of the proof to prevent replay attacks
         bytes32 proofHash = keccak256(
-            abi.encodePacked(
-                keccak256(abi.encodePacked(sourceChainId, sourceContract)),
-                keccak256(abi.encodePacked(sender, key, nonce))
-            )
+            abi.encodePacked(sourceChainId, sourceContract, proof)
         );
-
-        // Ensure this proof hasn't been used before
         require(!usedProofHashes[proofHash], "Proof already used");
-
-        // Verify the hashedKey matches what we compute
-        require(
-            hashedKey == keccak256(abi.encodePacked(sender, key)),
-            "Invalid hashedKey in event"
-        );
-
-        // Mark the proof as used
         usedProofHashes[proofHash] = true;
 
-        // Store the value
+        // Store the value and emit event
         store[hashedKey] = value;
-        keyOwners[hashedKey] = sender;
+        if (keyOwners[hashedKey] == address(0)) {
+            keyOwners[hashedKey] = sender;
+        }
 
         emit ValueUpdated(hashedKey, value);
     }

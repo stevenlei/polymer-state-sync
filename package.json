@@ -11,8 +11,8 @@
     "deploy:ink": "hardhat run scripts/deploy.js --network inkSepolia",
     "deploy:unichain": "hardhat run scripts/deploy.js --network unichainSepolia",
     "relayer": "node scripts/relayer.js",
-    "setValue": "node scripts/setValue.js",
-    "getValue": "node scripts/getValue.js",
+    "set": "node scripts/setValue.js",
+    "get": "node scripts/getValue.js",
     "test": "hardhat test"
   },
   "keywords": [],

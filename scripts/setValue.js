@@ -4,41 +4,13 @@ const { default: inquirer } = require("inquirer");
 const chalk = require("chalk");
 
 // Chain configurations
-const CHAINS = {
-  "optimism-sepolia": {
-    name: "Optimism Sepolia",
-    rpcUrl: process.env.OPTIMISM_SEPOLIA_RPC,
-    contractAddress: process.env.OPTIMISM_CONTRACT_ADDRESS,
-    chainId: 11155420,
-  },
-  "base-sepolia": {
-    name: "Base Sepolia",
-    rpcUrl: process.env.BASE_SEPOLIA_RPC,
-    contractAddress: process.env.BASE_CONTRACT_ADDRESS,
-    chainId: 84532,
-  },
-};
+const CHAINS = require("../config/chains");
 
 // Contract ABI
 const CONTRACT_ABI =
   require("../artifacts/contracts/CrossChainStore.sol/CrossChainStore.json").abi;
 
 async function main() {
-  // Validate environment variables
-  const requiredEnvVars = [
-    "PRIVATE_KEY",
-    "OPTIMISM_CONTRACT_ADDRESS",
-    "BASE_CONTRACT_ADDRESS",
-    "OPTIMISM_SEPOLIA_RPC",
-    "BASE_SEPOLIA_RPC",
-  ];
-
-  for (const envVar of requiredEnvVars) {
-    if (!process.env[envVar]) {
-      throw new Error(`Missing environment variable: ${envVar}`);
-    }
-  }
-
   // Create wallet from private key
   const wallet = new ethers.Wallet(process.env.PRIVATE_KEY);
   console.log(
@@ -50,8 +22,8 @@ async function main() {
   const answers = await inquirer.prompt([
     {
       type: "list",
-      name: "sourceChain",
-      message: "Select the source chain:",
+      name: "chain",
+      message: "Select a chain:",
       choices: [
         {
           name: "Optimism Sepolia",
@@ -61,20 +33,23 @@ async function main() {
           name: "Base Sepolia",
           value: "base-sepolia",
         },
+        {
+          name: "Mode Sepolia",
+          value: "mode-sepolia",
+        },
+        {
+          name: "Bob Sepolia",
+          value: "bob-sepolia",
+        },
+        {
+          name: "Ink Sepolia",
+          value: "ink-sepolia",
+        },
+        {
+          name: "UniChain Sepolia",
+          value: "unichain-sepolia",
+        },
       ],
-    },
-    {
-      type: "list",
-      name: "destinationChain",
-      message: "Select the destination chain:",
-      choices: (answers) => {
-        return Object.entries(CHAINS)
-          .filter(([key]) => key !== answers.sourceChain)
-          .map(([key, chain]) => ({
-            name: chain.name,
-            value: key,
-          }));
-      },
     },
     {
       type: "input",
@@ -100,13 +75,25 @@ async function main() {
     },
   ]);
 
+  // Validate environment variables
+  const requiredEnvVars = ["PRIVATE_KEY"];
+
+  requiredEnvVars.push(
+    `${answers.chain.toUpperCase().replace("-", "_")}_CONTRACT_ADDRESS`
+  );
+  requiredEnvVars.push(`${answers.chain.toUpperCase().replace("-", "_")}_RPC`);
+
+  for (const envVar of requiredEnvVars) {
+    if (!process.env[envVar]) {
+      throw new Error(`Missing environment variable: ${envVar}`);
+    }
+  }
+
   // Get chain configurations
-  const sourceChainConfig = CHAINS[answers.sourceChain];
-  const destinationChainConfig = CHAINS[answers.destinationChain];
+  const chainConfig = CHAINS[answers.chain];
 
   console.log(chalk.blue("\n📝 Transaction Details:"));
-  console.log(chalk.cyan(`>  From Chain: ${sourceChainConfig.name}`));
-  console.log(chalk.cyan(`>  To Chain: ${destinationChainConfig.name}`));
+  console.log(chalk.cyan(`>  Chain: ${chainConfig.name}`));
   console.log(chalk.cyan(`>  Key: ${answers.key}`));
   console.log(chalk.cyan(`>  Value (utf8): ${answers.value}`));
 
@@ -132,14 +119,12 @@ async function main() {
 
   try {
     // Setup provider and contract
-    console.log(
-      chalk.yellow(`\n🔄 Connecting to ${sourceChainConfig.name}...`)
-    );
-    const provider = new ethers.JsonRpcProvider(sourceChainConfig.rpcUrl);
-    console.log(chalk.green(`✅ Connected to ${sourceChainConfig.name}`));
+    console.log(chalk.yellow(`\n🔄 Connecting to ${chainConfig.name}...`));
+    const provider = new ethers.JsonRpcProvider(chainConfig.rpcUrl);
+    console.log(chalk.green(`✅ Connected to ${chainConfig.name}`));
     const connectedWallet = wallet.connect(provider);
     const contract = new ethers.Contract(
-      sourceChainConfig.contractAddress,
+      chainConfig.contractAddress,
       CONTRACT_ABI,
       connectedWallet
     );
@@ -149,27 +134,21 @@ async function main() {
     const valueBytes = ethers.toUtf8Bytes(answers.value);
 
     // Estimate gas
-    console.log(chalk.blue("\n🔄 Estimating gas..."));
+    console.log(chalk.yellow("\n⛽️ Estimating gas..."));
     const estimatedGas = await contract.setValue.estimateGas(
       answers.key,
-      valueBytes,
-      destinationChainConfig.chainId
+      valueBytes
     );
 
-    console.log(chalk.green(`⛽️ Estimated gas: ${estimatedGas.toString()}`));
+    console.log(
+      chalk.cyan(`>  Estimated gas: ${chalk.bold(estimatedGas.toString())}`)
+    );
 
     // Send transaction
-    console.log(
-      chalk.yellow(`\n📤 Setting value "${answers.value}" in the contract...`)
-    );
-    const tx = await contract.setValue(
-      answers.key,
-      valueBytes,
-      destinationChainConfig.chainId,
-      {
-        gasLimit: estimatedGas,
-      }
-    );
+    console.log(chalk.yellow("\n🚀 Sending transaction..."));
+    const tx = await contract.setValue(answers.key, valueBytes, {
+      gasLimit: estimatedGas,
+    });
     console.log(chalk.green("✅ Transaction sent"));
 
     console.log(chalk.cyan(`>  Tx hash: ${tx.hash}`));
@@ -188,14 +167,12 @@ async function main() {
     );
 
     if (valueSetEvent) {
-      const { sender, key, value, destinationChainId, nonce, hashedKey } =
-        valueSetEvent.args;
+      const { sender, key, value, nonce, hashedKey } = valueSetEvent.args;
 
       console.log(chalk.blue("\n📝 Event Details:"));
       console.log(chalk.cyan(`>  Sender: ${sender}`));
       console.log(chalk.cyan(`>  Key: ${key}`));
       console.log(chalk.cyan(`>  Value: ${ethers.toUtf8String(value)}`));
-      console.log(chalk.cyan(`>  Destination Chain ID: ${destinationChainId}`));
       console.log(chalk.cyan(`>  Nonce: ${nonce}`));
       console.log(chalk.cyan(`>  HashedKey: ${hashedKey}`));
     }
