@@ -10,6 +10,7 @@
     "deploy:bob": "hardhat run scripts/deploy.js --network bobSepolia",
     "deploy:ink": "hardhat run scripts/deploy.js --network inkSepolia",
     "deploy:unichain": "hardhat run scripts/deploy.js --network unichainSepolia",
+    "deploy:all": "node scripts/deploy-all.js",
     "relayer": "node scripts/relayer.js",
     "set": "node scripts/setValue.js",
     "get": "node scripts/getValue.js",
