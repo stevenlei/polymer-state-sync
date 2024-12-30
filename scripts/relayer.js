@@ -5,23 +5,7 @@ const chalk = require("chalk");
 
 const POLYMER_API_URL = "https://proof.sepolia.polymer.zone";
 
-// Chain configurations
-const activatedChains = process.env.RELAYER_ACTIVATED_CHAINS
-  ? process.env.RELAYER_ACTIVATED_CHAINS.split(",")
-  : [];
-
-if (activatedChains.length === 0) {
-  console.error(
-    "No chains are activated. Please set the RELAYER_ACTIVATED_CHAINS environment variable."
-  );
-  process.exit(1);
-}
-
-const CHAINS = Object.fromEntries(
-  Object.entries(require("../config/chains")).filter(
-    ([key]) => activatedChains.length === 0 || activatedChains.includes(key)
-  )
-);
+const { CHAINS, activatedChains } = require("../config/chains");
 
 // Contract ABI (only the events and functions we need)
 const CONTRACT_ABI =

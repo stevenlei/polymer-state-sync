@@ -3,8 +3,7 @@ const ethers = require("ethers");
 const { default: inquirer } = require("inquirer");
 const chalk = require("chalk");
 
-// Chain configurations
-const CHAINS = require("../config/chains");
+const { CHAINS } = require("../config/chains");
 
 // Contract ABI
 const CONTRACT_ABI =

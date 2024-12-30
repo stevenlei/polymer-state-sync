@@ -5,38 +5,42 @@ const path = require("path");
 const chalk = require("chalk");
 
 // Chain configurations
+const activatedChains = process.env.ACTIVATED_CHAINS
+  ? process.env.ACTIVATED_CHAINS.split(",")
+  : [];
+
 const CHAINS = [
   {
     name: "Optimism Sepolia",
     network: "optimismSepolia",
     envKey: "OPTIMISM_SEPOLIA_CONTRACT_ADDRESS",
+    id: "optimism-sepolia",
   },
   {
     name: "Base Sepolia",
     network: "baseSepolia",
     envKey: "BASE_SEPOLIA_CONTRACT_ADDRESS",
+    id: "base-sepolia",
   },
   {
     name: "Mode Sepolia",
     network: "modeSepolia",
     envKey: "MODE_SEPOLIA_CONTRACT_ADDRESS",
+    id: "mode-sepolia",
   },
   {
     name: "Bob Sepolia",
     network: "bobSepolia",
     envKey: "BOB_SEPOLIA_CONTRACT_ADDRESS",
+    id: "bob-sepolia",
   },
   {
     name: "Ink Sepolia",
     network: "inkSepolia",
     envKey: "INK_SEPOLIA_CONTRACT_ADDRESS",
+    id: "ink-sepolia",
   },
-  {
-    name: "Unichain Sepolia",
-    network: "unichainSepolia",
-    envKey: "UNICHAIN_SEPOLIA_CONTRACT_ADDRESS",
-  },
-];
+].filter((chain) => activatedChains.includes(chain.id));
 
 async function main() {
   console.log(chalk.blue("🚀 Starting deployment to all chains..."));

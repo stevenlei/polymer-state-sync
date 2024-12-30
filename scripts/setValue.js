@@ -3,8 +3,7 @@ const ethers = require("ethers");
 const { default: inquirer } = require("inquirer");
 const chalk = require("chalk");
 
-// Chain configurations
-const CHAINS = require("../config/chains");
+const { CHAINS } = require("../config/chains");
 
 // Contract ABI
 const CONTRACT_ABI =
@@ -24,32 +23,10 @@ async function main() {
       type: "list",
       name: "chain",
       message: "Select a chain:",
-      choices: [
-        {
-          name: "Optimism Sepolia",
-          value: "optimism-sepolia",
-        },
-        {
-          name: "Base Sepolia",
-          value: "base-sepolia",
-        },
-        {
-          name: "Mode Sepolia",
-          value: "mode-sepolia",
-        },
-        {
-          name: "Bob Sepolia",
-          value: "bob-sepolia",
-        },
-        {
-          name: "Ink Sepolia",
-          value: "ink-sepolia",
-        },
-        {
-          name: "UniChain Sepolia",
-          value: "unichain-sepolia",
-        },
-      ],
+      choices: Object.entries(CHAINS).map(([key, value]) => ({
+        name: value.name,
+        value: key,
+      })),
     },
     {
       type: "input",

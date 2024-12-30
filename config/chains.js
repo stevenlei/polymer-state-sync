@@ -1,5 +1,17 @@
 require("dotenv").config();
 
+// Chain configurations
+const activatedChains = process.env.ACTIVATED_CHAINS
+  ? process.env.ACTIVATED_CHAINS.split(",")
+  : [];
+
+if (activatedChains.length === 0) {
+  console.error(
+    "No chains are activated. Please set the ACTIVATED_CHAINS environment variable."
+  );
+  process.exit(1);
+}
+
 const CHAINS = {
   "optimism-sepolia": {
     name: "Optimism Sepolia",
@@ -39,4 +51,11 @@ const CHAINS = {
   },
 };
 
-module.exports = CHAINS;
+module.exports = {
+  CHAINS: Object.fromEntries(
+    Object.entries(CHAINS).filter(
+      ([key]) => activatedChains.length === 0 || activatedChains.includes(key)
+    )
+  ),
+  activatedChains,
+};
