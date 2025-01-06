@@ -81,14 +81,14 @@ contract StateSync {
         bytes32 hashedKey = bytes32(topics[2]);
 
         // Decode the unindexed event data
-        (, bytes memory value, ) = abi.decode(
+        (, bytes memory value, uint256 nonce) = abi.decode(
             eventData,
             (string, bytes, uint256)
         );
 
-        // Create a unique hash of the proof to prevent replay attacks
+        // Create a unique hash based on the event's unique identifiers including nonce
         bytes32 proofHash = keccak256(
-            abi.encodePacked(sourceChainId, sourceContract, proof)
+            abi.encodePacked(sourceChainId, sourceContract, hashedKey, nonce)
         );
         require(!usedProofHashes[proofHash], "Proof already used");
         usedProofHashes[proofHash] = true;
