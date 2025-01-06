@@ -94,10 +94,14 @@ async function main() {
         // Get the value using originalSender and key
         const value = await contract.getValue(originalSender, answers.key);
 
+        // Get the version of the key
+        const version = await contract.getKeyVersion(originalSender, answers.key);
+
         return {
           chain: chainConfig.name,
           hashedKey,
           value,
+          version,
           error: null,
         };
       } catch (error) {
@@ -105,6 +109,7 @@ async function main() {
           chain: chainConfig.name,
           hashedKey: null,
           value: null,
+          version: null,
           error: error.message,
         };
       }
@@ -115,27 +120,27 @@ async function main() {
   console.log(chalk.blue("\n📊 Results:"));
   for (const result of results) {
     console.log(chalk.yellow(`\n${result.chain}:`));
+    console.log(chalk.cyan(`>  Chain: ${chalk.bold(result.chain)}`));
+    console.log(chalk.cyan(`>  Hashed Key: ${chalk.bold(result.hashedKey)}`));
     if (result.error) {
-      console.log(chalk.red(`❌ Error: ${result.error}`));
-    } else if (result.value.length === 0) {
-      console.log(chalk.cyan(`>  No value set`));
+      console.log(chalk.red(`>  Error: ${result.error}`));
     } else {
-      console.log(chalk.cyan(`>  HashedKey: ${result.hashedKey}`));
       console.log(
         chalk.cyan(
           `>  Value (bytes): ${chalk.bold(ethers.hexlify(result.value))}`
         )
       );
       try {
-        const decodedValue = ethers.toUtf8String(result.value);
-        console.log(chalk.cyan(`>  Value (utf8): ${chalk.bold(decodedValue)}`));
+        const valueDecoded = ethers.toUtf8String(result.value);
+        console.log(chalk.cyan(`>  Value (utf8): ${chalk.bold(valueDecoded)}`));
       } catch (error) {
         console.log(
-          chalk.cyan(
-            `>  Value (utf8): ${chalk.red("Unable to decode as UTF-8 string")}`
+          chalk.yellow(
+            `>  Value could not be decoded as UTF-8: ${error.message}`
           )
         );
       }
+      console.log(chalk.cyan(`>  Version: ${chalk.bold(result.version)}`));
     }
   }
 }

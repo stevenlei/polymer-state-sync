@@ -46,7 +46,7 @@ class ChainListener {
     // Listen for ValueSet events
     this.contract.on(
       "ValueSet",
-      async (sender, key, value, nonce, hashedKey, event) => {
+      async (sender, key, value, nonce, hashedKey, version, event) => {
         try {
           // Create a unique event identifier
           const eventId = `${event.log.blockHash}-${event.log.transactionHash}-${event.log.index}`;
@@ -85,6 +85,7 @@ class ChainListener {
 
           console.log(chalk.cyan(`>  Nonce: ${chalk.bold(nonce)}`));
           console.log(chalk.cyan(`>  HashedKey: ${chalk.bold(hashedKey)}`));
+          console.log(chalk.cyan(`>  Version: ${chalk.bold(version)}`));
           console.log(
             chalk.cyan(`>  Block Number: ${chalk.bold(event.log.blockNumber)}`)
           );
@@ -120,6 +121,7 @@ class ChainListener {
                 value,
                 nonce,
                 hashedKey,
+                version,
               },
               blockHash: event.log.blockHash,
               blockNumber: event.log.blockNumber,
