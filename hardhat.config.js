@@ -8,15 +8,26 @@ const PRIVATE_KEY =
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
-    version: "0.8.19",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
-      },
-      viaIR: true,
-    },
+    compilers: [
+      {
+        version: "0.8.20",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
+      }
+    ]
   },
+  paths: {
+    sources: "./contracts",
+    artifacts: "./artifacts"
+  },
+  // Explicitly include only V2
+  includeFiles: [
+    "contracts/StateSyncV2.sol"
+  ],
   networks: {
     optimismSepolia: {
       url: process.env.OPTIMISM_SEPOLIA_RPC,
