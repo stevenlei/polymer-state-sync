@@ -14,20 +14,18 @@ module.exports = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 200
-          }
-        }
-      }
-    ]
+            runs: 200,
+          },
+        },
+      },
+    ],
   },
   paths: {
     sources: "./contracts",
-    artifacts: "./artifacts"
+    artifacts: "./artifacts",
   },
   // Explicitly include only V2
-  includeFiles: [
-    "contracts/StateSyncV2.sol"
-  ],
+  includeFiles: ["contracts/StateSync.sol"],
   networks: {
     optimismSepolia: {
       url: process.env.OPTIMISM_SEPOLIA_RPC,
@@ -58,6 +56,21 @@ module.exports = {
       url: process.env.UNICHAIN_SEPOLIA_RPC,
       accounts: [PRIVATE_KEY],
       chainId: 1301,
+    },
+    arbitrumSepolia: {
+      url: process.env.ARBITRUM_SEPOLIA_RPC,
+      accounts: [PRIVATE_KEY],
+      chainId: 421614,
+    },
+    everclearSepolia: {
+      url: process.env.EVERCLEAR_SEPOLIA_RPC,
+      accounts: [PRIVATE_KEY],
+      chainId: 6398,
+    },
+    mantleSepolia: {
+      url: process.env.MANTLE_SEPOLIA_RPC,
+      accounts: [PRIVATE_KEY],
+      chainId: 5003,
     },
   },
 };

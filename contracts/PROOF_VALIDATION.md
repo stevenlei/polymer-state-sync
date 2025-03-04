@@ -18,6 +18,7 @@ The function takes a proof from Polymer and uses it to validate and replicate a 
 ```
 
 The Polymer prover returns four key pieces of information:
+
 - `sourceChainId`: The chain ID where the event originated
 - `sourceContract`: The contract address that emitted the event
 - `topics`: A concatenated byte array of event topics (3 x 32 bytes)
@@ -43,11 +44,13 @@ assembly {
 ```
 
 The topics array contains:
+
 1. `topicsArray[0]`: Event signature hash
 2. `topicsArray[1]`: Indexed sender address (padded to 32 bytes)
 3. `topicsArray[2]`: Indexed hashedKey
 
 ### Why Assembly?
+
 We use assembly for efficient memory operations when splitting the concatenated topics. This avoids multiple memory allocations and copies that would occur with regular Solidity array operations.
 
 ## 3. Event Signature Verification
@@ -58,6 +61,7 @@ require(topicsArray[0] == expectedSelector, "Invalid event signature");
 ```
 
 This security check ensures:
+
 - Only ValueSet events are processed
 - The parameter types and order match exactly
 - Events from different contracts with similar structures are rejected
@@ -70,6 +74,7 @@ bytes32 hashedKey = topicsArray[2];
 ```
 
 Converting indexed parameters:
+
 - `sender`: Convert bytes32 → uint256 → uint160 → address
 - `hashedKey`: Direct use (already bytes32)
 
@@ -78,16 +83,17 @@ Converting indexed parameters:
 ```solidity
 (
     ,                       // skip key
-    bytes memory value,     
-    uint256 nonce,         
-    uint256 version        
+    bytes memory value,
+    uint256 nonce,
+    uint256 version
 ) = abi.decode(
-    unindexedData, 
+    unindexedData,
     (string, bytes, uint256, uint256)
 );
 ```
 
 The `unindexedData` contains ABI-encoded parameters that weren't indexed:
+
 1. `key` (string): Skipped as we use hashedKey from topics
 2. `value` (bytes): The actual value to store
 3. `nonce` (uint256): Used for replay protection
@@ -103,12 +109,14 @@ require(!usedProofHashes[proofHash], "hashKey already used");
 ```
 
 Creates a unique identifier for each proof by combining:
+
 - Source chain ID
 - Source contract address
 - Hashed key
 - Nonce
 
 This prevents:
+
 - Double-processing of proofs
 - Replay attacks
 - Out-of-order processing
@@ -121,6 +129,7 @@ keyVersions[hashedKey] = version;
 ```
 
 Ensures:
+
 - Updates are processed in order
 - No older versions overwrite newer ones
 - State remains consistent across chains
@@ -138,6 +147,7 @@ Ensures:
 This is a demonstration implementation. For production-ready applications, additional security measures are crucial:
 
 1. **Source Chain Validation**:
+
    - Maintain a whitelist of allowed source chains
    - Validate `sourceChainId` against this whitelist
    - Example:
@@ -146,6 +156,7 @@ This is a demonstration implementation. For production-ready applications, addit
      ```
 
 2. **Source Contract Validation**:
+
    - Maintain a mapping of authorized contracts per chain
    - Verify the `sourceContract` address is authorized
    - Example:
@@ -160,11 +171,12 @@ This is a demonstration implementation. For production-ready applications, addit
    - Always verify the event signature hash (topics[0])
    - This is crucial as it validates both event name and parameter types
    - Example:
+
      ```solidity
      // Validates event name and exact parameter types/order
      bytes32 expectedSelector = keccak256("ValueSet(address,string,bytes,uint256,bytes32,uint256)");
      require(topicsArray[0] == expectedSelector, "Invalid event signature");
-     
+
      // Even a slight change in parameters would generate a different hash:
      // "ValueSet(string,address,bytes,uint256,bytes32,uint256)" -> different hash
      // "ValueSet(address,bytes,string,uint256,bytes32,uint256)" -> different hash
@@ -173,6 +185,7 @@ This is a demonstration implementation. For production-ready applications, addit
 ## Event Structure Reference
 
 Original Event:
+
 ```solidity
 event ValueSet(
     address indexed sender,      // In topics[1]

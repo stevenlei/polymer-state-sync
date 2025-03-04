@@ -1,13 +1,13 @@
 require("dotenv").config();
 const ethers = require("ethers");
-const { default: inquirer } = require("inquirer");
+const inquirer = require("inquirer");
 const chalk = require("chalk");
 
 const { CHAINS } = require("../config/chains");
 
 // Contract ABI
 const CONTRACT_ABI =
-  require("../artifacts/contracts/StateSyncV2.sol/StateSyncV2.json").abi;
+  require("../artifacts/contracts/StateSync.sol/StateSync.json").abi;
 
 async function main() {
   // Create wallet from private key
@@ -19,24 +19,6 @@ async function main() {
   // Get user input
   console.log(chalk.blue("\n📝 Please provide the following information:"));
   const answers = await inquirer.prompt([
-    // {
-    //   type: "input",
-    //   name: "originalSender",
-    //   message:
-    //     "Enter the original sender address (leave blank to use current address):",
-    //   validate: (input) => {
-    //     if (!input.trim()) {
-    //       return true; // Empty is valid, will use current address
-    //     }
-    //     try {
-    //       // Check if it's a valid address
-    //       const address = ethers.getAddress(input);
-    //       return true;
-    //     } catch (error) {
-    //       return "Invalid Ethereum address";
-    //     }
-    //   },
-    // },
     {
       type: "input",
       name: "key",
@@ -97,8 +79,8 @@ async function main() {
         // Get the version using the hashed key for efficiency
         const version = await contract.getKeyVersionByHash(hashedKey);
 
-        // Get the key owner (new in V2)
-        const keyOwner = await contract.keyOwners(hashedKey);
+        // Get the key owner
+        const keyOwner = await contract.getKeyOwner(hashedKey);
 
         return {
           chain: chainConfig.name,
@@ -155,10 +137,14 @@ async function main() {
       console.log(chalk.cyan(`>  Version: ${chalk.bold(result.version)}`));
 
       // Add warning if versions are different across chains
-      if (results.some(r => 
-        r.version && result.version && 
-        r.version.toString() !== result.version.toString()
-      )) {
+      if (
+        results.some(
+          (r) =>
+            r.version &&
+            result.version &&
+            r.version.toString() !== result.version.toString()
+        )
+      ) {
         console.log(
           chalk.yellow(
             `⚠️  Warning: Version mismatch detected across chains. This key may be out of sync.`

@@ -1,13 +1,13 @@
 require("dotenv").config();
 const ethers = require("ethers");
-const { default: inquirer } = require("inquirer");
+const inquirer = require("inquirer");
 const chalk = require("chalk");
 
 const { CHAINS } = require("../config/chains");
 
 // Contract ABI
 const CONTRACT_ABI =
-  require("../artifacts/contracts/StateSyncV2.sol/StateSyncV2.json").abi;
+  require("../artifacts/contracts/StateSync.sol/StateSync.json").abi;
 
 async function main() {
   // Create wallet from private key
@@ -144,7 +144,8 @@ async function main() {
     );
 
     if (valueSetEvent) {
-      const { sender, key, value, nonce, hashedKey, version } = valueSetEvent.args;
+      const { sender, key, value, nonce, hashedKey, version } =
+        valueSetEvent.args;
 
       console.log(chalk.blue("\n📝 Event Details:"));
       console.log(chalk.cyan(`>  Sender: ${sender}`));
@@ -156,12 +157,14 @@ async function main() {
 
       // Also log the OnlyTopics event if found
       const onlyTopicsEvent = receipt.logs.find(
-        log => log.fragment?.name === "OnlyTopics"
+        (log) => log.fragment?.name === "OnlyTopics"
       );
       if (onlyTopicsEvent) {
         console.log(chalk.blue("\n📝 OnlyTopics Event Details:"));
         console.log(chalk.cyan(`>  Sender: ${onlyTopicsEvent.args.sender}`));
-        console.log(chalk.cyan(`>  HashedKey: ${onlyTopicsEvent.args.hashedKey}`));
+        console.log(
+          chalk.cyan(`>  HashedKey: ${onlyTopicsEvent.args.hashedKey}`)
+        );
         console.log(chalk.cyan(`>  Version: ${onlyTopicsEvent.args.version}`));
       }
     }

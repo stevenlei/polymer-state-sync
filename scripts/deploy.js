@@ -22,6 +22,9 @@ async function main() {
     bobSepolia: "BOB_SEPOLIA_CONTRACT_ADDRESS",
     inkSepolia: "INK_SEPOLIA_CONTRACT_ADDRESS",
     unichainSepolia: "UNICHAIN_SEPOLIA_CONTRACT_ADDRESS",
+    arbitrumSepolia: "ARBITRUM_SEPOLIA_CONTRACT_ADDRESS",
+    everclearSepolia: "EVERCLEAR_SEPOLIA_CONTRACT_ADDRESS",
+    mantleSepolia: "MANTLE_SEPOLIA_CONTRACT_ADDRESS",
   };
 
   // Get the Polymer Prover address based on the network
@@ -50,6 +53,18 @@ async function main() {
     // Unichain Sepolia
     polymerProverAddress =
       process.env.POLYMER_PROVER_UNICHAIN_TESTNET_CONTRACT_ADDRESS;
+  } else if (chainId === 421614) {
+    // Arbitrum Sepolia
+    polymerProverAddress =
+      process.env.POLYMER_PROVER_ARBITRUM_TESTNET_CONTRACT_ADDRESS;
+  } else if (chainId === 6398) {
+    // Everclear Sepolia
+    polymerProverAddress =
+      process.env.POLYMER_PROVER_EVERCLEAR_TESTNET_CONTRACT_ADDRESS;
+  } else if (chainId === 5003) {
+    // Mantle Sepolia
+    polymerProverAddress =
+      process.env.POLYMER_PROVER_MANTLE_TESTNET_CONTRACT_ADDRESS;
   } else {
     throw new Error("Unsupported network");
   }
@@ -60,8 +75,8 @@ async function main() {
     )
   );
 
-  console.log(chalk.yellow("📄 Deploying StateSyncV2..."));
-  const StateSync = await hre.ethers.getContractFactory("StateSyncV2");
+  console.log(chalk.yellow("📄 Deploying StateSync..."));
+  const StateSync = await hre.ethers.getContractFactory("StateSync");
   const store = await StateSync.deploy(polymerProverAddress);
   await store.waitForDeployment();
 

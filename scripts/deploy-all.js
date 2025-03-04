@@ -40,6 +40,30 @@ const CHAINS = [
     envKey: "INK_SEPOLIA_CONTRACT_ADDRESS",
     id: "ink-sepolia",
   },
+  {
+    name: "Unichain Sepolia",
+    network: "unichainSepolia",
+    envKey: "UNICHAIN_SEPOLIA_CONTRACT_ADDRESS",
+    id: "unichain-sepolia",
+  },
+  {
+    name: "Arbitrum Sepolia",
+    network: "arbitrumSepolia",
+    envKey: "ARBITRUM_SEPOLIA_CONTRACT_ADDRESS",
+    id: "arbitrum-sepolia",
+  },
+  {
+    name: "Everclear Sepolia",
+    network: "everclearSepolia",
+    envKey: "EVERCLEAR_SEPOLIA_CONTRACT_ADDRESS",
+    id: "everclear-sepolia",
+  },
+  {
+    name: "Mantle Sepolia",
+    network: "mantleSepolia",
+    envKey: "MANTLE_SEPOLIA_CONTRACT_ADDRESS",
+    id: "mantle-sepolia",
+  },
 ].filter((chain) => activatedChains.includes(chain.id));
 
 async function main() {

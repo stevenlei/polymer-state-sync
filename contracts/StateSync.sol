@@ -15,7 +15,7 @@ interface IPolymerProver {
         );
 }
 
-contract StateSyncV2 {
+contract StateSync {
     // Polymer prover contract
     IPolymerProver public immutable polymerProver;
 
@@ -32,26 +32,26 @@ contract StateSyncV2 {
 
     // Example events for demonstration
     event OnlyTopics(
-        address indexed sender,      // indexed (topic)
-        bytes32 indexed hashedKey,   // indexed (topic)
-        uint256 indexed version      // indexed (topic)
+        address indexed sender, // indexed (topic)
+        bytes32 indexed hashedKey, // indexed (topic)
+        uint256 indexed version // indexed (topic)
     );
 
     event OnlyData(
-        string key,                  // not indexed (data)
-        bytes value,                 // not indexed (data)
-        uint256 nonce,              // not indexed (data)
-        string message              // not indexed (data)
+        string key, // not indexed (data)
+        bytes value, // not indexed (data)
+        uint256 nonce, // not indexed (data)
+        string message // not indexed (data)
     );
 
     // Original ValueSet event (mixed topics and data)
     event ValueSet(
-        address indexed sender,      // indexed (topic)
-        string key,                  // not indexed (data)
-        bytes value,                 // not indexed (data)
-        uint256 nonce,              // not indexed (data)
-        bytes32 indexed hashedKey,   // indexed (topic)
-        uint256 version             // not indexed (data)
+        address indexed sender, // indexed (topic)
+        string key, // not indexed (data)
+        bytes value, // not indexed (data)
+        uint256 nonce, // not indexed (data)
+        bytes32 indexed hashedKey, // indexed (topic)
+        uint256 version // not indexed (data)
     );
 
     event ValueUpdated(bytes32 indexed hashedKey, bytes value, uint256 version);
@@ -96,11 +96,7 @@ contract StateSyncV2 {
         keyVersions[hashedKey] = newVersion;
 
         // Emit topic-only event (easier to query, more gas efficient)
-        emit OnlyTopics(
-            msg.sender,
-            hashedKey,
-            newVersion
-        );
+        emit OnlyTopics(msg.sender, hashedKey, newVersion);
 
         // Main event with both topics and data
         emit ValueSet(
@@ -113,12 +109,7 @@ contract StateSyncV2 {
         );
 
         // Emit data-only event (harder to query, less gas efficient)
-        emit OnlyData(
-            key,
-            value,
-            currentNonce,
-            "State updated successfully"
-        );
+        emit OnlyData(key, value, currentNonce, "State updated successfully");
     }
 
     /**
@@ -170,17 +161,21 @@ contract StateSyncV2 {
         ) = polymerProver.validateEvent(proof);
 
         // Step 2: Split concatenated topics into individual 32-byte values
-        bytes32[] memory topicsArray = new bytes32[](3);  // [eventSig, sender, hashedKey]
+        bytes32[] memory topicsArray = new bytes32[](3); // [eventSig, sender, hashedKey]
         require(topics.length >= 96, "Invalid topics length"); // 3 * 32 bytes
 
         // Use assembly for efficient memory operations when splitting topics
         assembly {
             // Skip first 32 bytes (length prefix of bytes array)
             let topicsPtr := add(topics, 32)
-            
+
             // Load each 32-byte topic into the array
             // topicsArray structure: [eventSig, sender, hashedKey]
-            for { let i := 0 } lt(i, 3) { i := add(i, 1) } {
+            for {
+                let i := 0
+            } lt(i, 3) {
+                i := add(i, 1)
+            } {
                 mstore(
                     add(add(topicsArray, 32), mul(i, 32)),
                     mload(add(topicsPtr, mul(i, 32)))
@@ -193,7 +188,9 @@ contract StateSyncV2 {
         // 1. Ensures we're processing a ValueSet event, not any other event type
         // 2. Prevents processing of events from different contracts with same parameter structure
         // 3. Validates the exact parameter types and order match our expected format
-        bytes32 expectedSelector = keccak256("ValueSet(address,string,bytes,uint256,bytes32,uint256)");
+        bytes32 expectedSelector = keccak256(
+            "ValueSet(address,string,bytes,uint256,bytes32,uint256)"
+        );
         require(topicsArray[0] == expectedSelector, "Invalid event signature");
 
         // Step 4: Extract indexed parameters from topics
@@ -205,14 +202,12 @@ contract StateSyncV2 {
         // Step 5: Decode non-indexed event parameters
         // Original event: ValueSet(address indexed sender, string key, bytes value, uint256 nonce, bytes32 indexed hashedKey, uint256 version)
         (
-            ,                       // skip key (we use hashedKey from topics)
-            bytes memory value,     // actual value to store
-            uint256 nonce,         // used for replay protection
-            uint256 version        // used for version control
-        ) = abi.decode(
-            unindexedData, 
-            (string, bytes, uint256, uint256)
-        );
+            ,
+            // skip key (we use hashedKey from topics)
+            bytes memory value, // actual value to store
+            uint256 nonce, // used for replay protection
+            uint256 version // used for version control
+        ) = abi.decode(unindexedData, (string, bytes, uint256, uint256));
 
         // Step 6: Create and verify unique proof hash for replay protection
         bytes32 proofHash = keccak256(
@@ -246,5 +241,10 @@ contract StateSyncV2 {
     ) external view returns (bytes memory) {
         bytes32 hashedKey = keccak256(abi.encodePacked(originalSender, key));
         return store[hashedKey];
+    }
+
+    // Get the owner of a key
+    function getKeyOwner(bytes32 hashedKey) external view returns (address) {
+        return keyOwners[hashedKey];
     }
 }

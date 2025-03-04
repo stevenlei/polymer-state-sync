@@ -1,4 +1,3 @@
-
 // node scripts/relayerV2.js
 
 require("dotenv").config();
@@ -12,11 +11,11 @@ const { CHAINS, activatedChains } = require("../config/chains");
 
 // Contract ABI (only the events and functions we need)
 const CONTRACT_ABI = [
-    "event ValueSet(address indexed sender, string key, bytes value, uint256 nonce, bytes32 indexed hashedKey, uint256 version)",
-    "event ValueUpdated(bytes32 indexed hashedKey, bytes value, uint256 version)",
-    "function getValue(address originalSender, string memory key) public view returns (bytes memory)",
-    "function setValue(string memory key, bytes memory value) public",
-    "function setValueFromSource(bytes calldata proof) external"
+  "event ValueSet(address indexed sender, string key, bytes value, uint256 nonce, bytes32 indexed hashedKey, uint256 version)",
+  "event ValueUpdated(bytes32 indexed hashedKey, bytes value, uint256 version)",
+  "function getValue(address originalSender, string memory key) public view returns (bytes memory)",
+  "function setValue(string memory key, bytes memory value) public",
+  "function setValueFromSource(bytes calldata proof) external",
 ];
 
 class ChainListener {
@@ -168,13 +167,16 @@ class ChainListener {
         try {
           // Get the transaction receipt to find local log index
           const provider = new ethers.JsonRpcProvider(this.config.rpcUrl);
-          const txReceipt = await provider.getTransactionReceipt(data.transactionHash);
-          
+          const txReceipt = await provider.getTransactionReceipt(
+            data.transactionHash
+          );
+
           // Find the local log index of our ValueSet event
-          const valueSetEventSignature = "ValueSet(address,string,bytes,uint256,bytes32,uint256)";
+          const valueSetEventSignature =
+            "ValueSet(address,string,bytes,uint256,bytes32,uint256)";
           const valueSetTopic = ethers.id(valueSetEventSignature);
           const localLogIndex = txReceipt.logs.findIndex(
-            log => log.topics[0] === valueSetTopic
+            (log) => log.topics[0] === valueSetTopic
           );
 
           console.log(
@@ -184,15 +186,11 @@ class ChainListener {
               )}...`
             )
           );
-          console.log(
-            chalk.cyan(`>  Block Number: ${data.blockNumber}`)
-          );
+          console.log(chalk.cyan(`>  Block Number: ${data.blockNumber}`));
           console.log(
             chalk.cyan(`>  Transaction Index: ${data.positionInBlock}`)
           );
-          console.log(
-            chalk.cyan(`>  Local Log Index: ${localLogIndex}`)
-          );
+          console.log(chalk.cyan(`>  Local Log Index: ${localLogIndex}`));
 
           // Request proof from Polymer API with local log index
           const proofRequest = await axios.post(
@@ -205,8 +203,8 @@ class ChainListener {
                 this.config.chainId,
                 data.blockNumber,
                 data.positionInBlock,
-                localLogIndex  // Using local log index instead of global
-              ]
+                localLogIndex, // Using local log index instead of global
+              ],
             },
             {
               headers: {
@@ -244,18 +242,21 @@ class ChainListener {
           let proofResponse;
           let attempts = 0;
           const maxAttempts = 10;
-          
-          while (!proofResponse?.data?.result?.proof && attempts < maxAttempts) {
+
+          while (
+            !proofResponse?.data?.result?.proof &&
+            attempts < maxAttempts
+          ) {
             attempts++;
-            await new Promise((resolve) => setTimeout(resolve, 500));  // Changed from 5000 to 500
-            
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+
             proofResponse = await axios.post(
               POLYMER_API_URL,
               {
                 jsonrpc: "2.0",
                 id: 1,
                 method: "log_queryProof",
-                params: [jobId]
+                params: [jobId],
               },
               {
                 headers: {
@@ -303,9 +304,10 @@ class ChainListener {
           );
 
           // Estimate gas for new method
-          const estimatedGas = await destinationContract.setValueFromSource.estimateGas(
-            proofInBytes
-          );
+          const estimatedGas =
+            await destinationContract.setValueFromSource.estimateGas(
+              proofInBytes
+            );
 
           console.log(
             chalk.cyan(
@@ -332,28 +334,43 @@ class ChainListener {
 
           // After transaction confirmation
           const receipt = await tx.wait();
-          
+
           // Find the ValueUpdated event
           const valueUpdatedEvent = receipt.logs.find(
             (log) => log.fragment?.name === "ValueUpdated"
           );
 
           if (valueUpdatedEvent) {
-            const { hashedKey, value: eventValue, version } = valueUpdatedEvent.args;
+            const {
+              hashedKey,
+              value: eventValue,
+              version,
+            } = valueUpdatedEvent.args;
             console.log(chalk.blue("\n📝 ValueUpdated Event Details:"));
             console.log(chalk.cyan(`>  HashedKey: ${hashedKey}`));
-            console.log(chalk.cyan(`>  Value: ${ethers.toUtf8String(eventValue)}`));
+            console.log(
+              chalk.cyan(`>  Value: ${ethers.toUtf8String(eventValue)}`)
+            );
             console.log(chalk.cyan(`>  Version: ${version}`));
 
             // Try to get value with both parameters
             try {
-                console.log(chalk.yellow("\n🔍 Attempting getValue:"));
-                console.log(chalk.cyan(">  Sender:"), data.args.sender);
-                console.log(chalk.cyan(">  Key:"), data.args.key);
-                const value = await destinationContract.getValue(data.args.sender, data.args.key);
-                console.log(chalk.cyan(">  Retrieved value:"), ethers.toUtf8String(value));
+              console.log(chalk.yellow("\n🔍 Attempting getValue:"));
+              console.log(chalk.cyan(">  Sender:"), data.args.sender);
+              console.log(chalk.cyan(">  Key:"), data.args.key);
+              const value = await destinationContract.getValue(
+                data.args.sender,
+                data.args.key
+              );
+              console.log(
+                chalk.cyan(">  Retrieved value:"),
+                ethers.toUtf8String(value)
+              );
             } catch (error) {
-                console.log(chalk.red(">  getValue failed with error:"), error.message);
+              console.log(
+                chalk.red(">  getValue failed with error:"),
+                error.message
+              );
             }
           }
 
@@ -364,7 +381,6 @@ class ChainListener {
               )}! Gas used: ${chalk.bold(receipt.gasUsed.toString())}`
             )
           );
-
         } catch (error) {
           console.error(
             chalk.red(
