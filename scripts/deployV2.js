@@ -60,8 +60,8 @@ async function main() {
     )
   );
 
-  console.log(chalk.yellow("📄 Deploying StateSync..."));
-  const StateSync = await hre.ethers.getContractFactory("StateSync");
+  console.log(chalk.yellow("📄 Deploying StateSyncV2..."));
+  const StateSync = await hre.ethers.getContractFactory("StateSyncV2");
   const store = await StateSync.deploy(polymerProverAddress);
   await store.waitForDeployment();
 

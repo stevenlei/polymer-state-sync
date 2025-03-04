@@ -49,6 +49,12 @@ const CHAINS = {
     contractAddress: process.env.UNICHAIN_SEPOLIA_CONTRACT_ADDRESS,
     chainId: 1301,
   },
+  "mantle-sepolia": {
+    name: "Mantle Sepolia",
+    rpcUrl: process.env.MANTLE_SEPOLIA_RPC,
+    contractAddress: process.env.MANTLE_TESTNET_CONTRACT_ADDRESS,
+    chainId: 5003,
+  },
 };
 
 module.exports = {

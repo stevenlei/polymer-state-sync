@@ -7,7 +7,7 @@ const { CHAINS } = require("../config/chains");
 
 // Contract ABI
 const CONTRACT_ABI =
-  require("../artifacts/contracts/StateSync.sol/StateSync.json").abi;
+  require("../artifacts/contracts/StateSyncV2.sol/StateSyncV2.json").abi;
 
 async function main() {
   // Create wallet from private key
@@ -94,14 +94,18 @@ async function main() {
         // Get the value using originalSender and key
         const value = await contract.getValue(originalSender, answers.key);
 
-        // Get the version of the key
-        const version = await contract.getKeyVersion(originalSender, answers.key);
+        // Get the version using the hashed key for efficiency
+        const version = await contract.getKeyVersionByHash(hashedKey);
+
+        // Get the key owner (new in V2)
+        const keyOwner = await contract.keyOwners(hashedKey);
 
         return {
           chain: chainConfig.name,
           hashedKey,
           value,
           version,
+          keyOwner,
           error: null,
         };
       } catch (error) {
@@ -110,13 +114,14 @@ async function main() {
           hashedKey: null,
           value: null,
           version: null,
+          keyOwner: null,
           error: error.message,
         };
       }
     })
   );
 
-  // Display results
+  // Display results with enhanced V2 information
   console.log(chalk.blue("\n📊 Results:"));
   for (const result of results) {
     console.log(chalk.yellow(`\n${result.chain}:`));
@@ -125,6 +130,13 @@ async function main() {
     if (result.error) {
       console.log(chalk.red(`>  Error: ${result.error}`));
     } else {
+      if (result.keyOwner && result.keyOwner !== ethers.ZeroAddress) {
+        console.log(chalk.cyan(`>  Key Owner: ${chalk.bold(result.keyOwner)}`));
+      } else {
+        console.log(chalk.yellow(`>  Key not yet initialized on this chain`));
+        continue;
+      }
+
       console.log(
         chalk.cyan(
           `>  Value (bytes): ${chalk.bold(ethers.hexlify(result.value))}`
@@ -141,6 +153,18 @@ async function main() {
         );
       }
       console.log(chalk.cyan(`>  Version: ${chalk.bold(result.version)}`));
+
+      // Add warning if versions are different across chains
+      if (results.some(r => 
+        r.version && result.version && 
+        r.version.toString() !== result.version.toString()
+      )) {
+        console.log(
+          chalk.yellow(
+            `⚠️  Warning: Version mismatch detected across chains. This key may be out of sync.`
+          )
+        );
+      }
     }
   }
 }
